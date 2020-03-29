@@ -5,7 +5,8 @@ const groupChat = require('./src/models/groupChat');
 
 var cors = require('cors');
 const app = express();
-app.use(cors());
+app.use(cors({ credentials: true, origin: true }));
+app.set()
 const http = require('http').Server(app);
 const port = process.env.PORT || 7000;
 
