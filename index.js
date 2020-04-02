@@ -2,11 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const groupChat = require('./src/models/groupChat');
-
+const {chatPrivate} = require('./src/query/query')
+const {fetch} = require('cross-fetch');
 var cors = require('cors');
 const app = express();
 app.use(cors({ credentials: true, origin: true }));
-app.set()
+
 const http = require('http').Server(app);
 const port = process.env.PORT || 7000;
 
@@ -25,8 +26,31 @@ io.on("connection", (socket) => {
         socket.join(info.roomID);
     })
 
+    /*
+       info:{
+            "roomID":""
+            "type":"text or media"
+            "text":""
+            "user":{
+                "id":"ab"
+            }
+
+        }
+    */
     socket.on('chat-private', (info) => {
+        var chatQuery = chatPrivate("hello");
         console.log("Chat private mess" + info);
+
+        fetch("https://gmgraphql.glitch.me/graphql",{
+            method:'POST',
+            headers:{
+                "token":""
+            },
+            body:JSON.stringify({
+                chatQuery,
+                variables:{currentID:"43",friendID:"44"}
+            })
+        })
 
         socket.broadcast.to(info[0].roomID).emit("message-private", [{
             "roomID": info[0].roomID,
@@ -45,7 +69,7 @@ io.on("connection", (socket) => {
     socket.on('chat-group', (info) => {
         console.log(info[1].text);
 
-        io.to(info[0].groupID).emit("group-message", info[1].text);
+        io.to(info[0].groupID).emit("group-message", info);
 
     })
 
