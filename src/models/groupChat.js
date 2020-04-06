@@ -10,8 +10,12 @@ const groupChat = mongoose.Schema({
     member: [String],
     messages: [
         {
-            userID: String,
-            text: String,
+            id: String,
+            text: {
+                content:String,
+                height:Number,
+                width:Number
+            },
             createAt: {
                 type: Date,
                 default: Date.now

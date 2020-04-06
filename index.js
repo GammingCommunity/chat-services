@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const groupChat = require('./src/models/groupChat');
-const {chatPrivate} = require('./src/query/query')
+const {chatPrivate,chatGroup} = require('./src/query/query')
 const {fetch} = require('cross-fetch');
 var cors = require('cors');
 const app = express();
@@ -66,11 +66,23 @@ io.on("connection", (socket) => {
     socket.on('join-group', (groupID) => {
         socket.join(groupID);
     })
-    socket.on('chat-group', (info) => {
-        console.log(info[1].text);
+    socket.on('chat-group', async (info) => {
+        var chatGroup = chatGroup(info[1].type, info[1].id, info[1].text);
+        console.log(info[1]);
 
-        io.to(info[0].groupID).emit("group-message", info);
-
+        socket.to(info[0].groupID).emit("group-message", info);
+        var result = await fetch("https://gmgraphql.glitch.me/graphql", {
+            method: 'POST',
+            headers: {
+                "token": ""
+            },
+            body: JSON.stringify({
+                chatGroup
+            })
+        })
+        console.log(result);
+        
+        //groupChat.findOneAndUpdate({ "roomID": info[0].groupID }, {"messages":{$push:}})
     })
 
 
