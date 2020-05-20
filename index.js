@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const groupChat = require('./src/models/groupChat');
-const {chatPrivate,chatGroup} = require('./src/query/query')
-const {fetch} = require('cross-fetch');
+const { chatPrivate, chatGroup } = require('./src/query/query')
+const { fetch } = require('cross-fetch');
 var cors = require('cors');
 const app = express();
 app.use(cors({ credentials: true, origin: true }));
@@ -12,9 +12,15 @@ const http = require('http').Server(app);
 const port = process.env.PORT || 7000;
 
 const io = require('socket.io')(http);
+io.use((socket, next) => {
+    var token = socket.request.headers.token;
+    if (token != null) {
+        next();
+    }
 
+})
 io.on("connection", (socket) => {
-
+    var token = socket.request.headers.token;
     console.log("has connected to namespace", socket.nsp.name);
 
     socket.on("request-socket-id", () => {
@@ -38,17 +44,16 @@ io.on("connection", (socket) => {
         }
     */
     socket.on('chat-private', (info) => {
-        var chatQuery = chatPrivate("hello");
+        var chatQuery = chatPrivate(info[1].messageType,info[1]);
         console.log("Chat private mess" + info);
 
-        fetch("https://gmgraphql.glitch.me/graphql",{
-            method:'POST',
-            headers:{
-                "token":""
+        fetch("https://gmgraphql.glitch.me/graphql", {
+            method: 'POST',
+            headers: {
+                "token": token
             },
-            body:JSON.stringify({
+            body: JSON.stringify({
                 chatQuery,
-                variables:{currentID:"43",friendID:"44"}
             })
         })
 
@@ -67,21 +72,22 @@ io.on("connection", (socket) => {
         socket.join(groupID);
     })
     socket.on('chat-group', async (info) => {
-        var chatGroup = chatGroup(info[1].type, info[1].id, info[1].text);
-        console.log(info[1]);
-
+        var chatGroupMutate = chatGroup(info[1].messageType, info[1].id, info[1].text, info[0].groupID);
+        console.log(info)
         socket.to(info[0].groupID).emit("group-message", info);
         var result = await fetch("https://gmgraphql.glitch.me/graphql", {
             method: 'POST',
             headers: {
-                "token": ""
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                "token": token
             },
             body: JSON.stringify({
-                chatGroup
+                query: chatGroupMutate
             })
         })
         console.log(result);
-        
+
         //groupChat.findOneAndUpdate({ "roomID": info[0].groupID }, {"messages":{$push:}})
     })
 

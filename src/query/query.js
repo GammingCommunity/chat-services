@@ -1,10 +1,12 @@
 module.exports = {
-    chatPrivate: (message) => `mutation($currentID:String!,$friendID:String!){
-        chatPrivate(currentUserID:$currentID,friendID:$friendID,input:{
-                user:{
-                    id:$currentID
+    chatPrivate: (messageType,text) => `mutation($friendID:String!){
+        chatPrivate(friendID:$friendID,input:{
+                messageType:${messageType}
+                text:{
+                    content:${text.content}
+                    height:${text.height},
+                    width:${text.width}
                 }
-                text:${message}
             }){
                 status
                 success
