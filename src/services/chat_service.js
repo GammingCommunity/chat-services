@@ -3,7 +3,7 @@ const env = require('../config/env');
 const {getAllGameChannelID} = require('../query/query');
 module.exports = {
     getAllGameID: async (token) => {
-        return fetch(env.mainURL, {
+        var response = await fetch("https://gmgraphql.glitch.me/graphql", {
             method: 'POST',
             headers: {
                 "token": token
@@ -11,9 +11,9 @@ module.exports = {
             body: JSON.stringify({
                 query: getAllGameChannelID
             })
-        }).then((v) => {
-            console.log("data ",v);
-            
-        })
+        });
+        var result = await response.json();
+        console.log(result);
+        
     }
 }

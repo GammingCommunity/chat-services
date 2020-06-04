@@ -1,34 +1,50 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
-const { chatPrivate, chatGroup } = require('./src/mutation/mutation');
-const { fetch } = require('cross-fetch');
 var cors = require('cors');
-const chatServices = require('./src/services/chat_service');
 const app = express();
-app.use(cors({ credentials: true, origin: true }));
+const env = require('./env');
+const { chatPrivate, chatGroup } = require('./src/mutation/mutation');
+const checkSession = require('./middleware/checkSession');
+const { fetch } = require('cross-fetch');
 
+const chatServices = require('./src/services/chat_service');
+
+app.use(cors({ credentials: true, origin: true }));
 const http = require('http').Server(app);
 const port = process.env.PORT || 7000;
 
 const io = require('socket.io')(http);
+
+var type = "";
+
 io.use((socket, next) => {
     var token = socket.request.headers.token;
-    if (token != null) {
-        next();
+    var authCode = socket.request.headers.auth_code;
+    
+    if (authCode == env.auth_code) {
+        type = "SYSTEM";
+        next()
+    
+    } else {
+        type = "USER";
+        if (checkSession(token)) {
+            next();
+        }
     }
+    
 
 })
 io.on("connection", async (socket) => {
     var token = socket.request.headers.token;
-    console.log("has connected to namespace", socket.nsp.name);
+    console.log("has connected to namespace", socket.nsp.name + type);
 
-    // init all game chat channel
-    var gameIDs= await chatServices.getAllGameID(token)
-    console.log(gameIDs);
+   // init all game chat channel
+    if (type == "SYSTEM") {
+        var gameIDs = await chatServices.getAllGameID(token)
+        console.log(gameIDs);
+    }
     
 
-    
     socket.on("request-socket-id", () => {
 
         socket.emit("get-socket-id", socket.id)

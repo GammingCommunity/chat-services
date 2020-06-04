@@ -1,4 +1,4 @@
 require('dotenv').config();
-module.exports.default = {
+module.exports = {
     mainURL : process.env.mainService
 }
