@@ -1,10 +1,10 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const groupChat = require('./src/models/groupChat');
-const { chatPrivate, chatGroup } = require('./src/query/query')
+const { chatPrivate, chatGroup } = require('./src/mutation/mutation');
 const { fetch } = require('cross-fetch');
 var cors = require('cors');
+const chatServices = require('./src/services/chat_service');
 const app = express();
 app.use(cors({ credentials: true, origin: true }));
 
@@ -19,10 +19,16 @@ io.use((socket, next) => {
     }
 
 })
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
     var token = socket.request.headers.token;
     console.log("has connected to namespace", socket.nsp.name);
 
+    // init all game chat channel
+    var gameIDs= await chatServices.getAllGameID(token)
+    console.log(gameIDs);
+    
+
+    
     socket.on("request-socket-id", () => {
 
         socket.emit("get-socket-id", socket.id)
@@ -102,11 +108,11 @@ io.on("connection", (socket) => {
 })
 
 http.listen(port, () => {
-    console.log('listening on *:' + port);
-    mongoose.Promise = global.Promise;
+    console.log('listening on PORT: ' + port);
+   /* mongoose.Promise = global.Promise;
     mongoose.set('useFindAndModify', false);
     mongoose.set('debug', true);
     mongoose.connect(process.env.CONNECTIONS, { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true }, (res, err) => {
         console.log('Connected to MongoDB');
-    })
+    })*/
 })
