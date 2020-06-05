@@ -1,19 +1,21 @@
 const { fetch} = require('cross-fetch');
-const env = require('../config/env');
-const {getAllGameChannelID} = require('../query/query');
+const env = require('../../env');
+const queries = require('../query/query');
 module.exports = {
-    getAllGameID: async (token) => {
+    getAllGameID: async () => {
         var response = await fetch("https://gmgraphql.glitch.me/graphql", {
             method: 'POST',
             headers: {
-                "token": token
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                "auth_code":env.auth_code
             },
             body: JSON.stringify({
-                query: getAllGameChannelID
+                query: queries.getAllGameChannelID
             })
         });
         var result = await response.json();
-        console.log(result);
+        return result.data.getListGame;
         
     }
 }

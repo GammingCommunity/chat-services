@@ -15,39 +15,44 @@ const port = process.env.PORT || 7000;
 
 const io = require('socket.io')(http);
 
-var type = "";
+var type = "USER";
 
 io.use((socket, next) => {
     var token = socket.request.headers.token;
     var authCode = socket.request.headers.auth_code;
-    
     if (authCode == env.auth_code) {
         type = "SYSTEM";
         next()
-    
     } else {
         type = "USER";
         if (checkSession(token)) {
             next();
         }
     }
-    
-
 })
 io.on("connection", async (socket) => {
     var token = socket.request.headers.token;
     console.log("has connected to namespace", socket.nsp.name + type);
 
-   // init all game chat channel
+    // init all game chat channel
     if (type == "SYSTEM") {
         var gameIDs = await chatServices.getAllGameID(token)
-        console.log(gameIDs);
+        for (const id of gameIDs) {
+            socket.join(id._id)
+            
+        }
     }
-    
+
 
     socket.on("request-socket-id", () => {
 
         socket.emit("get-socket-id", socket.id)
+        console.log(io.sockets.adapter.rooms);
+        
+    })
+
+    socket.on('join-public-game-channel', (id) => {
+        socket.join(id);
     })
 
     socket.on('join-chat-private', (info) => {
@@ -66,7 +71,7 @@ io.on("connection", async (socket) => {
         }
     */
     socket.on('chat-private', (info) => {
-        var chatQuery = chatPrivate(info[1].messageType,info[1]);
+        var chatQuery = chatPrivate(info[1].messageType, info[1]);
         console.log("Chat private mess" + info);
 
         fetch("https://gmgraphql.glitch.me/graphql", {
@@ -125,10 +130,10 @@ io.on("connection", async (socket) => {
 
 http.listen(port, () => {
     console.log('listening on PORT: ' + port);
-   /* mongoose.Promise = global.Promise;
-    mongoose.set('useFindAndModify', false);
-    mongoose.set('debug', true);
-    mongoose.connect(process.env.CONNECTIONS, { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true }, (res, err) => {
-        console.log('Connected to MongoDB');
-    })*/
+    /* mongoose.Promise = global.Promise;
+     mongoose.set('useFindAndModify', false);
+     mongoose.set('debug', true);
+     mongoose.connect(process.env.CONNECTIONS, { useUnifiedTopology: true, useNewUrlParser: true, useCreateIndex: true }, (res, err) => {
+         console.log('Connected to MongoDB');
+     })*/
 })
