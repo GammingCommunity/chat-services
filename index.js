@@ -1,12 +1,11 @@
 require('dotenv').config();
 const express = require('express');
+const { fetch } = require('cross-fetch');
 var cors = require('cors');
 const app = express();
-const env = require('./env');
-const { chatPrivate, chatGroup } = require('./src/mutation/mutation');
 const checkSession = require('./middleware/checkSession');
-const { fetch } = require('cross-fetch');
-
+const { chatFile, chatMedia ,chatText} = require('./src/services/update_service');
+const messageEnum = require('./src/enum/messageEnum');
 const chatServices = require('./src/services/chat_service');
 
 app.use(cors({ credentials: true, origin: true }));
@@ -19,8 +18,9 @@ var type = "USER";
 
 io.use((socket, next) => {
     var token = socket.request.headers.token;
-    var authCode = socket.request.headers.auth_code;
-    if (authCode == env.auth_code) {
+    var authCode = socket.request.headers.auth_code == undefined ? false : true;
+
+    if (authCode) {
         type = "SYSTEM";
         next()
     } else {
@@ -39,7 +39,7 @@ io.on("connection", async (socket) => {
         var gameIDs = await chatServices.getAllGameID(token)
         for (const id of gameIDs) {
             socket.join(id._id)
-            
+
         }
     }
 
@@ -48,7 +48,7 @@ io.on("connection", async (socket) => {
 
         socket.emit("get-socket-id", socket.id)
         console.log(io.sockets.adapter.rooms);
-        
+
     })
 
     socket.on('join-public-game-channel', (id) => {
@@ -56,66 +56,51 @@ io.on("connection", async (socket) => {
     })
 
     socket.on('join-chat-private', (info) => {
+        console.log(info)
         socket.join(info.roomID);
     })
 
-    /*
-       info:{
-            "roomID":""
-            "type":"text or media"
-            "text":""
-            "user":{
-                "id":"ab"
-            }
+    socket.on('chat-private', async (info) => {
+        var chatID = info[0].chatID;
+        var receiverID = info[1].receiver;
+        var messageType = info[1].messageType;
+        var text = info[1].text.content;
+        var media = info[1].text.media;
 
-        }
-    */
-    socket.on('chat-private', (info) => {
-        var chatQuery = chatPrivate(info[1].messageType, info[1]);
         console.log("Chat private mess" + info);
-
-        fetch("https://gmgraphql.glitch.me/graphql", {
-            method: 'POST',
-            headers: {
-                "token": token
-            },
-            body: JSON.stringify({
-                chatQuery,
-            })
-        })
-
-        socket.broadcast.to(info[0].roomID).emit("message-private", [{
-            "roomID": info[0].roomID,
-        },
-        { "user": { "id": info[1].user.id }, "text": info[1].text }]
-
-
-        );
-        //chatPrivate.updateOne()
+        // file || image || video || gif || url
+        if (messageType == messageEnum.text) {
+            chatText(token, receiverID, "private", text).then((v) => {
+                socket.broadcast.to(chatID).emit("receive-message-private", text);
+            });
+        }
+        else {
+            chatMedia(token, receiverID, "private", media)
+        }
 
     })
 
     socket.on('join-group', (groupID) => {
         socket.join(groupID);
     })
-    socket.on('chat-group', async (info) => {
-        var chatGroupMutate = chatGroup(info[1].messageType, info[1].id, info[1].text, info[0].groupID);
-        console.log(info)
-        socket.to(info[0].groupID).emit("group-message", info);
-        var result = await fetch("https://gmgraphql.glitch.me/graphql", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                "token": token
-            },
-            body: JSON.stringify({
-                query: chatGroupMutate
-            })
-        })
-        console.log(result);
 
-        //groupChat.findOneAndUpdate({ "roomID": info[0].groupID }, {"messages":{$push:}})
+    socket.on('chat-group', async (info) => {
+        var groupID = info[0].groupID;
+        var messageType = info[0].messageType;
+        var media = info[1].media;
+        var content = info[1].text.content;
+        // file || image || video || gif || url
+        if (messageType == "text") {
+            chatText(token, groupID, "room", content).then((v) => {
+                socket.to(info[0].groupID).emit("receive-group-message", content);
+            })
+        }
+        else {
+            chatMedia(token, groupID, "room", media).then((v) => {
+                socket.to(info[0].groupID).emit("receive-group-message", media);
+            })
+        }
+       
     })
 
 
