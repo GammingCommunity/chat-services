@@ -1,4 +1,4 @@
-const checkType = require('../../util/checkType');
+const checkType = require('../util/checkFileType');
 
 module.exports = {
   chatPrivateText: () => `
