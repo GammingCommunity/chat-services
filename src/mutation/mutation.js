@@ -1,15 +1,29 @@
 const checkType = require('../util/checkFileType');
 
 module.exports = {
-  chatPrivateText: () => `
+  chatPrivateText: (receiverID,message) => `
     mutation{
-
-    
+      chatPrivate(friendID:"${receiverID}",messages:{
+        messageType:file
+        text:{
+            content:"${message}"       
+        }
+      }){
+        status 
+        success
+      }
     }`,
-  chatRoomText: () => `
+  chatRoomText: (roomID,message) => `
     mutation{
-
-    
+      chatRoom(roomID:"${roomID}",messages:{
+        messageType:text
+        text:{
+            content:"${message}"
+        }
+      }){
+        status 
+        success
+      }
     }`,
   
   chatRoomFile: (roomID, media, fileExt) => `

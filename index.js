@@ -43,7 +43,6 @@ io.on("connection", async (socket) => {
         }
     }
 
-
     socket.on("request-socket-id", () => {
 
         socket.emit("get-socket-id", socket.id)
@@ -67,6 +66,11 @@ io.on("connection", async (socket) => {
         var text = info[1].text.content;
         var media = info[1].text.media;
 
+        var mediaMessage = {
+            messageType: messageType,
+            mediaInfo:media
+        }
+
         console.log("Chat private mess" + info);
         // file || image || video || gif || url
         if (messageType == messageEnum.text) {
@@ -74,8 +78,15 @@ io.on("connection", async (socket) => {
                 socket.broadcast.to(chatID).emit("receive-message-private", text);
             });
         }
+        else if (messageType == messageEnum.file) {
+            chatFile(token, receiverID, "private", media).then((v) =>{
+                socket.broadcast.to(chatID).emit("receive-message-private", mediaMessage);
+            })
+        }
         else {
-            chatMedia(token, receiverID, "private", media)
+            chatMedia(token, receiverID, "private", media).then((v) => {
+                socket.broadcast.to(chatID).emit("receive-message-private", mediaMessage);
+            })
         }
 
     })
@@ -89,15 +100,26 @@ io.on("connection", async (socket) => {
         var messageType = info[0].messageType;
         var media = info[1].media;
         var content = info[1].text.content;
+
+        var mediaMessage = {
+            messageType: messageType,
+            mediaInfo: media
+        }
+
         // file || image || video || gif || url
         if (messageType == "text") {
             chatText(token, groupID, "room", content).then((v) => {
                 socket.to(info[0].groupID).emit("receive-group-message", content);
             })
         }
+        else if (messageType == messageEnum.file) {
+            chatFile(token, groupID, "room", media).then((v) => {
+                socket.to(info[0].groupID).emit("receive-group-message", mediaMessage);
+            })
+        }
         else {
             chatMedia(token, groupID, "room", media).then((v) => {
-                socket.to(info[0].groupID).emit("receive-group-message", media);
+                socket.to(info[0].groupID).emit("receive-group-message", mediaMessage);
             })
         }
        
